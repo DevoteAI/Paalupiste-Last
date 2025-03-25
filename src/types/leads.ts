@@ -1,36 +1,29 @@
 export interface Lead {
   id: string;
-  // Company information - camelCase and snake_case variants
-  companyName: string;
-  company_name?: string;
-  companyAddress: string;
-  company_address?: string;
-  website: string;
-  company_description: string;
-  
-  // Decision maker information - camelCase and snake_case variants
-  decisionMakerName: string;
-  decision_maker_name?: string;
-  decisionMakerTitle: string;
-  decision_maker_title?: string;
-  decisionMakerEmail: string;
-  decision_maker_email?: string;
-  decisionMakerLinkedIn: string;
-  decision_maker_linkedin?: string;
-  
-  // Status and other metadata
-  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-  priority: 'low' | 'medium' | 'high';
-  lastContactDate: string;
-  last_contact_date?: string;
-  notes: string;
-  
-  // Source tracking
-  historyId?: string;
-  history_id?: string;
-  importId?: string;
-  import_id?: string;
-  
-  // Additional properties that might be present
-  [key: string]: any;
+  name: string;
+  email: string;
+  company: string;
+  position: string;
+  industry: string;
+  location: string;
+  phone?: string;
+  linkedin_url?: string;
+  status: 'new' | 'contacted' | 'qualified' | 'disqualified';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadGenerationParams {
+  industry: string;
+  location: string;
+  companySize: string;
+  count: number;
+}
+
+export interface LeadStats {
+  totalLeads: number;
+  newLeads: number;
+  qualifiedLeads: number;
+  conversionRate: number;
 }

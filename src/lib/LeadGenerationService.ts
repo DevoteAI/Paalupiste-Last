@@ -1,71 +1,70 @@
-import { FormData } from '../types';
-
-interface WebhookResponse {
-  status: string;
-  SheetID: string;
-  message: string;
-  SheetLink: string;
-  requestId: string;
-}
+import { supabase } from './supabaseClient';
+import { Lead } from '../types/leads';
 
 export class LeadGenerationService {
-  private static WEBHOOK_URL = 'https://hook.eu2.make.com/8xqjvc4pyrhei7f1nc3w6364sqahzkj5';
-  private static IMPORT_WEBHOOK_URL = 'https://hook.eu2.make.com/neljqr5sqfmzh0cfagnkzdl8a9nmtr3b';
-
-  /**
-   * Get the correct webhook URL for importing leads
-   */
-  static getImportWebhookUrl() {
-    // Use environment variable if available
-    const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK_URL;
-    
-    // Default webhook URL as fallback
-    const defaultWebhook = LeadGenerationService.IMPORT_WEBHOOK_URL;
-    
-    // Log which URL we're using
-    console.log('Using webhook URL:', webhookUrl || defaultWebhook);
-    
-    return webhookUrl || defaultWebhook;
-  }
-
-  async generateLeads(
-    formData: FormData,
-    callbacks: {
-      onStatusChange?: (status: string, message: string) => void;
-      onComplete?: (sheetId: string, sheetLink: string) => void;
-      onError?: (error: Error) => void;
-    }
-  ): Promise<{ success: boolean; sheetId?: string; sheetLink?: string; error?: string }> {
+  async generateLeads(params: {
+    industry: string;
+    location: string;
+    companySize: string;
+    count: number;
+  }): Promise<Lead[]> {
     try {
-      const response = await fetch(LeadGenerationService.WEBHOOK_URL, {
+      // Call external API or service to generate leads
+      const response = await fetch('/api/generate-leads', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(params),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start lead generation');
+        throw new Error('Failed to generate leads');
       }
 
-      const data: WebhookResponse = await response.json();
-      
-      if (data.status === 'processing' && data.SheetLink) {
-        callbacks.onStatusChange?.('success', 'Results will be available at the provided link in 10 minutes');
-        callbacks.onComplete?.(data.SheetID, data.SheetLink);
-        return {
-          success: true,
-          sheetId: data.SheetID,
-          sheetLink: data.SheetLink
-        };
-      }
+      const leads: Lead[] = await response.json();
 
-      throw new Error('Invalid response from server');
+      // Store leads in Supabase
+      const { error } = await supabase
+        .from('leads')
+        .insert(leads);
+
+      if (error) throw error;
+
+      return leads;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      callbacks.onError?.(new Error(errorMessage));
-      return { success: false, error: errorMessage };
+      console.error('Error generating leads:', error);
+      throw error;
+    }
+  }
+
+  async getLeads(): Promise<Lead[]> {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      throw error;
+    }
+  }
+
+  async updateLeadStatus(leadId: string, status: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ status })
+        .eq('id', leadId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+      throw error;
     }
   }
 }

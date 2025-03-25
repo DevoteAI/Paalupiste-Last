@@ -1,43 +1,30 @@
-export interface FormData {
-  location: {
-    country: string;
-    state: string;
-  };
-  industries: string[];
-  companySize: string;
-  additionalIndustries?: string;
-}
+export * from './leads';
+export * from './content';
+export * from './video';
 
-export interface GenerationHistory {
+export interface User {
   id: string;
-  location: {
-    country: string;
-    state: string;
-  } | string;
-  industries: string[];
-  companySize: string;
-  additionalIndustries?: string;
-  timestamp: string;
-  status: 'success' | 'error' | 'completed';
-  leadsCount?: number;
-  sheetLink?: string;
-  sheetId?: string;
-  errorMessage?: string;
-  productName?: string;
-  productDescription?: string;
-  formData?: FormData;
-  results?: any;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+  created_at: string;
 }
 
-export interface SuccessModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  sheetLink?: string;
+export interface AuthState {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
 }
 
-export interface GenerationHistoryContextType {
-  history: GenerationHistory[];
-  addToHistory: (entry: GenerationHistory) => void;
-  addGeneration: (entry: GenerationHistory) => void;
-  clearHistory: () => void;
+export interface Session {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token: string;
+  user: User;
+}
+
+export interface ApiError {
+  message: string;
+  status?: number;
 }
