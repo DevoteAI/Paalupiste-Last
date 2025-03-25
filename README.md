@@ -1,3 +1,3 @@
-# LeadGen3
+# Paalupiste
 
-[Edit in StackBlitz next generation editor ⚡️](https://stackblitz.com/~/github.com/LashaKh/LeadGen3)
+A modern web application built with React, TypeScript, and Supabase.
