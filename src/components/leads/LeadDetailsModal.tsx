@@ -1,211 +1,139 @@
-import React from 'react';
-import { X, Building2, Globe, Mail, Phone, MapPin, Calendar, FileText, User, Briefcase, Linkedin, AlertCircle, FileTextIcon } from 'lucide-react';
+import React, { useState } from 'react';
 import { Lead } from '../../types/leads';
+import { supabase } from '../../lib/supabaseClient';
 
 interface LeadDetailsModalProps {
   lead: Lead;
   onClose: () => void;
+  onUpdate: (updatedLead: Lead) => void;
 }
 
-export function LeadDetailsModal({ lead, onClose }: LeadDetailsModalProps) {
+const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
+  lead,
+  onClose,
+  onUpdate,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    status: lead.status,
+    notes: lead.notes || '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .update({
+          status: formData.status,
+          notes: formData.notes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', lead.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        onUpdate(data);
+        onClose();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="lead-details-modal" role="dialog">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-        
-        <div className="relative w-full max-w-3xl bg-white rounded-xl shadow-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{lead.companyName}</h2>
-              {lead.website && (
-                <a 
-                  href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:text-primary-hover flex items-center mt-1"
-                >
-                  <Globe className="w-4 h-4 mr-1" />
-                  {lead.website}
-                </a>
-              )}
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="mt-3">
+          <h3 className="text-lg font-medium leading-6 text-gray-900">
+            Lead Details
+          </h3>
+          <form onSubmit={handleSubmit} className="mt-4">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Name
+              </label>
+              <p className="mt-1 text-sm text-gray-900">{lead.name}</p>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-500 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Company Information */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Building2 className="w-5 h-5 mr-2 text-primary" />
-                    Company Information
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {/* Company description is now prominently displayed */}
-                    {lead.company_description && (
-                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <p className="text-sm font-medium text-gray-500 mb-2">Company Description</p>
-                        <p className="text-gray-900 whitespace-pre-wrap text-sm">{lead.company_description}</p>
-                      </div>
-                    )}
-                    
-                    {lead.companyAddress && (
-                      <div className="flex items-start">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-1 mr-2" />
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">Address</p>
-                          <p className="text-gray-900">{lead.companyAddress}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-primary" />
-                    Status & Notes
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Status</p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                          ${
-                            lead.status === 'new'
-                              ? 'bg-blue-100 text-blue-800'
-                              : lead.status === 'contacted'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : lead.status === 'qualified'
-                              ? 'bg-green-100 text-green-800'
-                              : lead.status === 'converted'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-red-100 text-red-800'
-                          }
-                        `}>
-                          {lead.status}
-                        </span>
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500 mb-1">Priority</p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                          ${
-                            lead.priority === 'high'
-                              ? 'bg-red-100 text-red-800'
-                              : lead.priority === 'medium'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-green-100 text-green-800'
-                          }
-                        `}>
-                          {lead.priority}
-                        </span>
-                      </div>
-                    </div>
-
-                    {lead.lastContactDate && (
-                      <div className="flex items-center">
-                        <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                        <div>
-                          <p className="text-sm text-gray-500">Last Contact</p>
-                          <p className="text-gray-900">
-                            {new Date(lead.lastContactDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {lead.notes && (
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Notes</p>
-                        <p className="text-gray-900 whitespace-pre-wrap">{lead.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Decision Maker Information */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <User className="w-5 h-5 mr-2 text-primary" />
-                  Decision Maker
-                </h3>
-                
-                <div className="space-y-4">
-                  {/* Show a message if no decision maker info is available */}
-                  {!lead.decisionMakerName && !lead.decisionMakerTitle && 
-                   !lead.decisionMakerEmail && !lead.decisionMakerLinkedIn && (
-                    <div className="flex items-center text-gray-500 bg-gray-50 p-4 rounded-lg">
-                      <AlertCircle className="w-5 h-5 mr-2 text-amber-500" />
-                      <p>No decision maker information available yet.</p>
-                    </div>
-                  )}
-
-                  {lead.decisionMakerName && (
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Name</p>
-                      <p className="text-gray-900 font-medium">{lead.decisionMakerName}</p>
-                    </div>
-                  )}
-
-                  {lead.decisionMakerTitle && (
-                    <div className="flex items-center">
-                      <Briefcase className="w-4 h-4 text-gray-400 mr-2" />
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Title</p>
-                        <p className="text-gray-900">{lead.decisionMakerTitle}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {lead.decisionMakerEmail && (
-                    <div className="flex items-center">
-                      <Mail className="w-4 h-4 text-gray-400 mr-2" />
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Email</p>
-                        <a 
-                          href={`mailto:${lead.decisionMakerEmail}`}
-                          className="text-primary hover:text-primary-hover"
-                        >
-                          {lead.decisionMakerEmail}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {lead.decisionMakerLinkedIn && (
-                    <div className="flex items-center">
-                      <Linkedin className="w-4 h-4 text-gray-400 mr-2" />
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">LinkedIn</p>
-                        <a 
-                          href={lead.decisionMakerLinkedIn.startsWith('http') ? lead.decisionMakerLinkedIn : `https://${lead.decisionMakerLinkedIn}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:text-primary-hover"
-                        >
-                          View Profile
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Company
+              </label>
+              <p className="mt-1 text-sm text-gray-900">{lead.company}</p>
             </div>
-          </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <p className="mt-1 text-sm text-gray-900">{lead.email}</p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Status
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              >
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="qualified">Qualified</option>
+                <option value="disqualified">Disqualified</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Notes
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            {error && (
+              <div className="mb-4 text-sm text-red-600">{error}</div>
+            )}
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default LeadDetailsModal;
